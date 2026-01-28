@@ -6,12 +6,12 @@ import spacy
 # Токен бота
 TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 if not TOKEN:
-    raise ValueError("Не найден TELEGRAM_BOT_TOKEN в переменных окружения!")
+    raise ValueError("TELEGRAM_BOT_TOKEN не задан в переменных окружения!")
 
 # Загружаем Spacy заранее
 nlp = spacy.load("ru_core_news_sm")
 
-# Sentiment анализатор — будет загружаться лениво
+# Sentiment анализатор будет загружаться лениво
 sentiment_analyzer = None
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -43,7 +43,7 @@ async def analyze_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         from transformers import pipeline
         sentiment_analyzer = pipeline(
             "sentiment-analysis",
-            model="cointegrated/rubert-tiny-sentiment"
+            model="cointegrated/rubert-tiny-sentiment"  # лёгкая модель
         )
 
     sentiment_result = sentiment_analyzer(text[:512])
