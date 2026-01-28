@@ -3,13 +3,13 @@ from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, ContextTypes, filters
 import spacy
 
-# Берём токен из переменной окружения
+# Токен бота
 TOKEN = os.environ['TELEGRAM_BOT_TOKEN']
 
-# Загружаем Spacy заранее (модель должна быть установлена через requirements.txt)
+# Загружаем Spacy заранее
 nlp = spacy.load("ru_core_news_sm")
 
-# Sentiment анализатор будем загружать лениво (при первом запросе), чтобы экономить RAM
+# Sentiment анализатор — лениво
 sentiment_analyzer = None
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -20,7 +20,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def analyze_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     global sentiment_analyzer
-
     text = update.message.text
 
     # --- Статистика текста ---
@@ -42,10 +41,10 @@ async def analyze_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         from transformers import pipeline
         sentiment_analyzer = pipeline(
             "sentiment-analysis",
-            model="blanchefort/rubert-base-cased-sentiment"
+            model="cointegrated/rubert-tiny-sentiment"  # лёгкая модель
         )
 
-    sentiment_result = sentiment_analyzer(text[:512])  # обрезаем длинный текст
+    sentiment_result = sentiment_analyzer(text[:512])
     sentiment_label = sentiment_result[0]['label']
     sentiment_score = round(sentiment_result[0]['score'], 2)
 
