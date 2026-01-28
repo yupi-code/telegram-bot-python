@@ -3,4 +3,3 @@ spacy==3.6.1
 ru-core-news-sm @ https://github.com/explosion/spacy-models/releases/download/ru_core_news_sm-3.6.0/ru_core_news_sm-3.6.0-py3-none-any.whl
 transformers==4.40.2
 torch==2.1.0+cpu -f https://download.pytorch.org/whl/torch_stable.html
-
