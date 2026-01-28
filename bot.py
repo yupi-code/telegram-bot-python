@@ -2,14 +2,15 @@ import os
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, ContextTypes, filters
 import spacy
-from transformers import pipeline
 
 # Берём токен из переменной окружения
 TOKEN = os.environ['TELEGRAM_BOT_TOKEN']
 
-# Загружаем модели
-nlp = spacy.load("ru_core_news_sm")  # для лингвистического анализа
-sentiment_analyzer = pipeline("sentiment-analysis", model="blanchefort/rubert-base-cased-sentiment")  # для русского
+# Загружаем Spacy заранее (модель должна быть установлена через requirements.txt)
+nlp = spacy.load("ru_core_news_sm")
+
+# Sentiment анализатор будем загружать лениво (при первом запросе), чтобы экономить RAM
+sentiment_analyzer = None
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
@@ -18,12 +19,14 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 async def analyze_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    global sentiment_analyzer
+
     text = update.message.text
 
     # --- Статистика текста ---
     lines = text.split("\n")
     words = text.split()
-    avg_words_per_line = round(len(words)/len(lines), 2)
+    avg_words_per_line = round(len(words)/len(lines), 2) if len(lines) > 0 else 0
 
     # --- Лингвистический анализ ---
     doc = nlp(text)
@@ -31,12 +34,18 @@ async def analyze_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     for token in doc:
         pos_counts[token.pos_] = pos_counts.get(token.pos_, 0) + 1
 
-    # Ключевые слова (существительные и прилагательные)
     keywords = [token.text for token in doc if token.pos_ in ["NOUN", "ADJ"]]
-    keywords_summary = ", ".join(list(set(keywords))[:10])  # первые 10 уникальных слов
+    keywords_summary = ", ".join(list(set(keywords))[:10])
 
-    # --- Настроение текста ---
-    sentiment_result = sentiment_analyzer(text[:512])  # обрезаем длинный текст для модели
+    # --- Настроение текста (лениво) ---
+    if sentiment_analyzer is None:
+        from transformers import pipeline
+        sentiment_analyzer = pipeline(
+            "sentiment-analysis",
+            model="blanchefort/rubert-base-cased-sentiment"
+        )
+
+    sentiment_result = sentiment_analyzer(text[:512])  # обрезаем длинный текст
     sentiment_label = sentiment_result[0]['label']
     sentiment_score = round(sentiment_result[0]['score'], 2)
 
@@ -55,7 +64,6 @@ async def analyze_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 def main():
     app = Application.builder().token(TOKEN).build()
-
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, analyze_text))
 
