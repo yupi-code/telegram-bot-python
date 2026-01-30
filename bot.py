@@ -2,49 +2,66 @@ import os
 from telegram import Update
 from telegram.ext import (
     ApplicationBuilder,
-    MessageHandler,
     CommandHandler,
+    MessageHandler,
     ContextTypes,
     filters,
 )
-
 from langdetect import detect
-from textblob import TextBlob
 
+# ====== ТОКЕН ======
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 if not TOKEN:
     raise RuntimeError("❌ TELEGRAM_BOT_TOKEN не задан")
 
+# ====== СЛОВАРИ НАСТРОЕНИЯ ======
+POSITIVE_WORDS = {
+    "хорошо", "отлично", "прекрасно", "классно", "супер",
+    "люблю", "рад", "счастлив", "восторг", "круто",
+    "замечательно", "офигенно", "приятно"
+}
+
+NEGATIVE_WORDS = {
+    "плохо", "ужасно", "ненавижу", "грусть", "печально",
+    "злой", "бесит", "страшно", "отвратительно", "ужас",
+    "кошмар", "раздражает"
+}
+
+# ====== КОМАНДА /start ======
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "👋 Привет!\n"
-        "Пришли текст — я сделаю базовый анализ:\n"
-        "• язык\n"
-        "• настроение\n"
-        "• ключевые слова\n"
-        "• статистику"
+        "👋 Привет!\n\n"
+        "Пришли любой текст — я:\n"
+        "• определю язык\n"
+        "• проанализирую настроение\n"
+        "• посчитаю статистику\n"
+        "• выделю ключевые слова"
     )
 
+# ====== АНАЛИЗ НАСТРОЕНИЯ ======
 def analyze_sentiment(text: str) -> str:
-    blob = TextBlob(text)
-    polarity = blob.sentiment.polarity
+    text = text.lower()
+    pos = sum(word in text for word in POSITIVE_WORDS)
+    neg = sum(word in text for word in NEGATIVE_WORDS)
 
-    if polarity > 0.2:
-        return "😊 Позитивный"
-    elif polarity < -0.2:
-        return "😠 Негативный"
+    if pos > neg:
+        return "😊 Позитивное"
+    elif neg > pos:
+        return "😠 Негативное"
     else:
-        return "😐 Нейтральный"
+        return "😐 Нейтральное"
 
+# ====== КЛЮЧЕВЫЕ СЛОВА ======
 def extract_keywords(text: str) -> str:
     words = [
         w.lower().strip(".,!?():;\"'")
         for w in text.split()
         if len(w) > 4
     ]
-    keywords = list(dict.fromkeys(words))[:8]
-    return ", ".join(keywords) if keywords else "—"
+    unique = list(dict.fromkeys(words))
+    return ", ".join(unique[:8]) if unique else "—"
 
+# ====== ОСНОВНОЙ АНАЛИЗ ======
 async def analyze_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
 
@@ -73,6 +90,7 @@ async def analyze_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"🔑 Ключевые слова:\n{keywords}"
     )
 
+# ====== ЗАПУСК ======
 def main():
     app = ApplicationBuilder().token(TOKEN).build()
 
@@ -84,4 +102,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
